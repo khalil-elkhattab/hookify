@@ -22,6 +22,7 @@
     "convex": "^1.31.2",
     "firebase": "^12.7.0",
     "framer-motion": "^12.25.0",
+    "googleapis": "^170.0.0",
     "groq-sdk": "^0.37.0",
     "gtts": "^0.2.1",
     "lucide-react": "^0.562.0",
