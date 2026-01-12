@@ -21,9 +21,10 @@ import AdsQueue from "./_components/AdsQueue";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
-// --- New Component: AdConnector (Integrated & Updated) ---
+// --- Sub-Component: AdConnector ---
 function AdConnector({ userId }) {
-  const accounts = useQuery(api.platforms.getConnectedAccounts, { userId }) || [];
+  // Connected to the new social API while keeping original styling
+  const accounts = useQuery(api.social.getConnectedAccounts, { userId: userId }) || [];
 
   const platforms = [
     { id: 'tiktok', name: 'TikTok Ads', color: 'bg-[#FE2C55]', authUrl: '/api/auth/tiktok' },
@@ -70,7 +71,7 @@ function AdConnector({ userId }) {
   );
 }
 
-// --- Product Source Selector ---
+// --- Sub-Component: Product Source Selector ---
 function ProductSourceSelector({ onSelect, selected }) {
   const sources = [
     { id: 'aliexpress', name: 'AliExpress', color: 'bg-orange-600' },
@@ -101,6 +102,7 @@ function ProductSourceSelector({ onSelect, selected }) {
   );
 }
 
+// --- Sub-Component: Store Selector ---
 function StoreSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const stores = useQuery(api.stores.get) || [];
@@ -114,7 +116,7 @@ function StoreSelector() {
         storeName: newStoreUrl.split(".")[0], 
         storeUrl: newStoreUrl,
         platform: "shopify",
-        userId: "current_user" 
+        userId: "user_1" 
       });
       setNewStoreUrl("");
       alert("✅ Store linked successfully!");
@@ -160,6 +162,7 @@ function StoreSelector() {
   );
 }
 
+// --- Background Music Configuration ---
 const backgroundTracks = [
   { id: "none", label: "No Music", url: "", icon: <SpeakerLoudIcon/> },
   { id: "hype", label: "🔥 Viral Hype", url: "/music/hype.mp3", icon: <LightningBoltIcon/> },
@@ -171,6 +174,7 @@ const backgroundTracks = [
   { id: "arabic", label: "🎵 Arabic Beats", url: "/music/arabic.mp3", icon: <GlobeIcon/> },
 ];
 
+// --- Main Dashboard Component ---
 export default function HookifyDashboard() {
   const languages = ["Arabic (Modern)", "English (US)", "French", "Spanish", "German"];
   const videoStyles = ["Viral Hormozi", "MrBeast Style", "Luxury", "UGC"];
@@ -394,7 +398,6 @@ export default function HookifyDashboard() {
     }
   };
 
-  // --- NEW INTEGRATED PUBLISH FUNCTION ---
   const handlePublish = async () => {
     const activePlats = Object.values(selectedPlatforms).filter(Boolean).length;
     if (activePlats === 0) return alert("Select at least one platform!");
@@ -402,7 +405,6 @@ export default function HookifyDashboard() {
 
     setIsPublishing(true);
     try {
-        // 1. Create the actual MP4 file on the server
         const videoGenRes = await fetch("/api/generate/video-file", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -417,7 +419,6 @@ export default function HookifyDashboard() {
 
         if (!videoData.success) throw new Error("Video generation failed");
 
-        // 2. Upload to selected platforms (Example: Google/YouTube)
         if (selectedPlatforms.google) {
             await fetch("/api/upload", {
                 method: "POST",
@@ -442,11 +443,11 @@ export default function HookifyDashboard() {
       <Header />
       <div className="grid grid-cols-12 gap-8 items-stretch">
         
-        {/* العمود الأيسر: محرك الإبداع */}
+        {/* Left Column: Creative Engine */}
         <div className="col-span-12 lg:col-span-4 order-2 lg:order-1 flex flex-col gap-6">
           <div className="space-y-4">
             <StoreSelector />
-            <AdConnector userId="current_user" /> 
+            <AdConnector userId="user_1" /> 
           </div>
           
           <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] space-y-2 backdrop-blur-xl h-full flex flex-col shadow-2xl relative overflow-hidden">
@@ -530,7 +531,7 @@ export default function HookifyDashboard() {
           </div>
         </div>
 
-        {/* فيديو العرض (الوسط) */}
+        {/* Video Display (Middle) */}
         <div className="col-span-12 lg:col-span-4 order-1 lg:order-2 flex flex-col justify-center items-center gap-6">
           <div className="bg-[#050505] border-[12px] border-[#1a1a1a] rounded-[3.5rem] aspect-[9/16] w-full max-w-[320px] relative shadow-2xl overflow-hidden ring-1 ring-white/10 group">
             <div className="absolute top-4 inset-x-8 h-1 bg-white/10 rounded-full overflow-hidden z-50">
@@ -544,7 +545,7 @@ export default function HookifyDashboard() {
                         transform: isMounted ? `scale(${1.15 + (audioLevel / 220)}) rotate(${idx === 0 ? 0 : (idx % 2 === 0 ? 0.3 : -0.3)}deg)` : 'scale(1.15)',
                         filter: `brightness(${1 + audioLevel / 150}) contrast(1.05)`,
                         transition: 'transform 0.1s cubic-bezier(0.17, 0.67, 0.83, 0.67)'
-                      }} className={`w-[85%] h-[80%] object-contain z-10 drop-shadow-[0_0_50px_rgba(59,130,246,0.3)]`} 
+                    }} className={`w-[85%] h-[80%] object-contain z-10 drop-shadow-[0_0_50px_rgba(59,130,246,0.3)]`} 
                     />
                   ))
                 ) : <div className="flex flex-col items-center gap-4 text-zinc-800"><PlayIcon className="w-12 h-12 animate-pulse" /><p className="text-[10px] font-black uppercase tracking-widest">Ready to Build</p></div>}
@@ -575,7 +576,6 @@ export default function HookifyDashboard() {
             </div>
           </div>
 
-          {/* New: Multi-Platform Selection UI */}
           <div className="w-full max-w-[320px] space-y-2">
             <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Publish To</label>
             <div className="flex gap-2">
@@ -607,7 +607,7 @@ export default function HookifyDashboard() {
           </button>
         </div>
 
-        {/* Ads Queue (العمود الأيمن) */}
+        {/* Ads Queue (Right Column) */}
         <div className="col-span-12 lg:col-span-4 order-3 h-full sticky top-10">
           <AdsQueue hooks={generatedHooks} isLoading={loading} onPreviewClick={(txt) => { setActiveHook(txt); playVoice(txt); }} />
         </div>

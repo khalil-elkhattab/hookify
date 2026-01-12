@@ -14,6 +14,7 @@ import type * as functions_createUser from "../functions/createUser.js";
 import type * as functions_getUser from "../functions/getUser.js";
 import type * as platforms from "../platforms.js";
 import type * as scraper from "../scraper.js";
+import type * as social from "../social.js";
 import type * as stores from "../stores.js";
 import type * as user from "../user.js";
 
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   "functions/getUser": typeof functions_getUser;
   platforms: typeof platforms;
   scraper: typeof scraper;
+  social: typeof social;
   stores: typeof stores;
   user: typeof user;
 }>;
