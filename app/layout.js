@@ -1,24 +1,33 @@
 import "./globals.css";
 import { ThemeProvider } from "../components/ui/provider";
-import { AuthProvider } from "./_context/authContext";
-import ConvexClientProvider from "./ConvexClientProvider"; // استيراد الملف الجديد
+import ConvexClientProvider from "./ConvexClientProvider";
+import { ClerkProvider } from "@clerk/nextjs";
+
+export const metadata = {
+  title: "Hookify OS - AI Video Generator",
+  description: "Create viral ads in seconds",
+};
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body>
-        <ConvexClientProvider> {/* أضف هذا هنا */}
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-          >
-            <AuthProvider>
+    // 1. ClerkProvider هو الغلاف الخارجي لإدارة الهوية
+    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+      <html lang="en" className="dark" suppressHydrationWarning>
+        <body>
+          {/* 2. ConvexClientProvider يربط Clerk بقاعدة البيانات */}
+          <ConvexClientProvider>
+            {/* 3. ThemeProvider لإدارة شكل الموقع (Dark Mode) */}
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem={false}
+            >
+              {/* قمنا بحذف AuthProvider هنا لأنه كان تابعاً لـ Firebase */}
               {children}
-            </AuthProvider>
-          </ThemeProvider>
-        </ConvexClientProvider> {/* وأغلقه هنا */}
-      </body>
-    </html>
+            </ThemeProvider>
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

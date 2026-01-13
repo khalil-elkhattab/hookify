@@ -1,19 +1,30 @@
-import { mutation, query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-// 1. جلب بيانات المستخدم بناءً على الإيميل
-export const getUser = query({
-  args: { email: v.string() },
-  handler: async (ctx, args) => {
-    if (!args.email) return null;
+/**
+ * 1. دالة جلب المستخدم (تدعم currentUser و getUser)
+ */
+export const currentUser = query({
+  args: { 
+    email: v.optional(v.string()), 
+    userId: v.optional(v.string()) 
+  },
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
     return await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
   },
 });
 
-// 2. إنشاء أو تحديث المستخدم (المستخدمة عند تسجيل الدخول الأول)
+export const getUser = currentUser; // مرادف للدالة
+
+/**
+ * 2. دالة الإنشاء (تدعم createOrUpdateUser و storeUser)
+ */
 export const createOrUpdateUser = mutation({
   args: {
     name: v.string(),
@@ -21,53 +32,61 @@ export const createOrUpdateUser = mutation({
     imageUrl: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
-    if (!user) {
-      // إعدادات البداية لجميع الميزات
-      return await ctx.db.insert("users", {
+    if (existingUser) {
+      await ctx.db.patch(existingUser._id, {
         name: args.name,
-        email: args.email,
         imageUrl: args.imageUrl,
-        credits: 5, // هدايا التسجيل
-        isSubscribed: false,
-        settings: {
-          defaultLanguage: "Arabic",
-          autoRemoveBg: true,
-          musicVolume: 0.1,
-          videoStyle: "Viral Hormozi",
-          autoScrapeMetadata: true,
-          showWatermark: true,
-        }
       });
+      return existingUser._id;
     }
-    return user;
+
+    return await ctx.db.insert("users", {
+      tokenIdentifier: identity.tokenIdentifier,
+      name: args.name,
+      email: args.email,
+      imageUrl: args.imageUrl,
+      credits: 10.0,
+      isSubscribed: false,
+    });
   },
 });
 
-// 3. تحديث الإعدادات (المستخدمة في صفحة Settings للتحكم في الميزات)
-export const updateUserSettings = mutation({
-  args: {
-    email: v.string(),
-    name: v.string(),
-    settings: v.any(), // يقبل الآن musicVolume أو defaultMusicVolume وكل شيء آخر
+export const storeUser = createOrUpdateUser; // مرادف للدالة
+
+/**
+ * 3. دالة تسجيل الحملات (logCampaign)
+ */
+export const logCampaign = mutation({
+  args: { 
+    productUrl: v.string(), 
+    videoUrl: v.string(), 
+    platform: v.string() 
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
-    if (!user) throw new Error("User not found in Convex");
+    if (!user) return null;
 
-    await ctx.db.patch(user._id, {
-      name: args.name,
-      settings: args.settings,
+    return await ctx.db.insert("campaigns", {
+      userId: user._id,
+      productUrl: args.productUrl,
+      videoUrl: args.videoUrl,
+      platform: args.platform,
+      status: "published",
     });
-    
-    return { success: true };
   },
 });

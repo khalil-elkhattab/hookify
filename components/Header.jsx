@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { useAuth } from "@/app/_context/authContext"; // now it exists
+import { UserButton, useUser, SignedIn, SignedOut } from "@clerk/nextjs";
 import Authentication from "./Authentication";
 
 export default function Header() {
-  const { user, loading, logout } = useAuth();
+  // استخدام Clerk بدلاً من Firebase
+  const { user, isLoaded } = useUser();
 
   return (
     <header className="flex justify-between items-center px-8 py-4 bg-gray-900 text-white shadow-md sticky top-0 z-50">
@@ -17,26 +18,27 @@ export default function Header() {
       </div>
 
       {/* Auth Section */}
-      {loading ? null : user ? (
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard">
-            <Button className="bg-primary px-6 py-3 rounded-lg text-white font-semibold">
-              Dashboard
-            </Button>
-          </Link>
-          <div className="w-12 h-12 bg-white text-primary font-bold rounded-full flex items-center justify-center shadow-md">
-            {user.displayName ? user.displayName[0].toUpperCase() : "U"}
-          </div>
-        </div>
+      {!isLoaded ? (
+        <div className="w-10 h-10 rounded-full bg-gray-800 animate-pulse"></div>
       ) : (
-        <Authentication>Get Started</Authentication>
+        <div className="flex items-center gap-4">
+          {/* في حالة تسجيل الدخول */}
+          <SignedIn>
+            <Link href="/dashboard">
+              <Button className="bg-primary px-6 py-3 rounded-lg text-white font-semibold hover:opacity-90 transition">
+                Dashboard
+              </Button>
+            </Link>
+            {/* زر المستخدم الرسمي من Clerk (يعرض الصورة والقائمة المنسدلة) */}
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+
+          {/* في حالة عدم تسجيل الدخول */}
+          <SignedOut>
+            <Authentication>Get Started</Authentication>
+          </SignedOut>
+        </div>
       )}
     </header>
   );
 }
-
-
-
-
-
-

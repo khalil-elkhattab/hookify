@@ -1,7 +1,9 @@
 'use client';
 import React from "react";
 import Authentication from "./Authentication";
-import { Button } from "./ui/button"; // تأكد من استيراد زر Shadcn لتوحيد التصميم
+import { Button } from "./ui/button";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -24,15 +26,26 @@ export default function Hero() {
         Create, edit, and publish fast to save you time.
       </p>
 
-      {/* الأزرار مع ضمان المحاذاة على سطر واحد */}
+      {/* الأزرار */}
       <div className="flex flex-row items-center justify-center gap-6 w-full">
         
-        {/* زر الـ Authentication */}
-        <Authentication>
-           Get Started
-        </Authentication>
+        {/* إذا لم يكن مسجلاً: يظهر زر Get Started */}
+        <SignedOut>
+          <Authentication>
+              Get Started
+          </Authentication>
+        </SignedOut>
 
-        {/* زر Watch Demo بنفس التنسيق تماماً */}
+        {/* إذا كان مسجلاً: يظهر زر الذهاب للوحة التحكم */}
+        <SignedIn>
+          <Link href="/dashboard">
+            <Button className="px-12 py-7 rounded-full font-black text-xl bg-purple-600 hover:bg-purple-700 transition transform hover:scale-105 h-auto">
+                Go to Dashboard
+            </Button>
+          </Link>
+        </SignedIn>
+
+        {/* زر Watch Demo */}
         <Button 
           variant="outline" 
           className="px-12 py-7 rounded-full font-black text-xl border-gray-800 text-white hover:bg-gray-800 transition transform hover:scale-105 h-auto"

@@ -20,12 +20,11 @@ import Header from "./_components/Header";
 import AdsQueue from "./_components/AdsQueue";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useUser } from "@clerk/nextjs";
 
 // --- Sub-Component: AdConnector ---
 function AdConnector({ userId }) {
-  // Connected to the new social API while keeping original styling
-  const accounts = useQuery(api.social.getConnectedAccounts, { userId: userId }) || [];
-
+  const accounts = useQuery(api.social?.getConnectedAccounts, { userId: userId }) || [];
   const platforms = [
     { id: 'tiktok', name: 'TikTok Ads', color: 'bg-[#FE2C55]', authUrl: '/api/auth/tiktok' },
     { id: 'meta', name: 'Meta / FB / IG', color: 'bg-[#0668E1]', authUrl: '/api/auth/meta' },
@@ -105,8 +104,8 @@ function ProductSourceSelector({ onSelect, selected }) {
 // --- Sub-Component: Store Selector ---
 function StoreSelector() {
   const [isOpen, setIsOpen] = useState(false);
-  const stores = useQuery(api.stores.get) || [];
-  const addStore = useMutation(api.stores.add);
+  const stores = useQuery(api.stores?.get) || [];
+  const addStore = useMutation(api.stores?.add);
   const [newStoreUrl, setNewStoreUrl] = useState("");
 
   const handleAddStore = async () => {
@@ -162,7 +161,6 @@ function StoreSelector() {
   );
 }
 
-// --- Background Music Configuration ---
 const backgroundTracks = [
   { id: "none", label: "No Music", url: "", icon: <SpeakerLoudIcon/> },
   { id: "hype", label: "🔥 Viral Hype", url: "/music/hype.mp3", icon: <LightningBoltIcon/> },
@@ -174,8 +172,8 @@ const backgroundTracks = [
   { id: "arabic", label: "🎵 Arabic Beats", url: "/music/arabic.mp3", icon: <GlobeIcon/> },
 ];
 
-// --- Main Dashboard Component ---
 export default function HookifyDashboard() {
+  const { user } = useUser();
   const languages = ["Arabic (Modern)", "English (US)", "French", "Spanish", "German"];
   const videoStyles = ["Viral Hormozi", "MrBeast Style", "Luxury", "UGC"];
 
@@ -205,6 +203,12 @@ export default function HookifyDashboard() {
     google: false,
   });
 
+  // --- Convex Hooks ---
+  const deductCredits = useMutation(api.users.deductCredits); 
+  const logCampaignMutation = useMutation(api.users.logCampaign);
+  const storeUser = useMutation(api.users.storeUser);
+  const userData = useQuery(api.users.currentUser);
+
   const audioContextRef = useRef(null);
   const audioSourceRef = useRef(null);
   const musicRef = useRef(null);
@@ -218,6 +222,12 @@ export default function HookifyDashboard() {
       if (musicRef.current) musicRef.current.pause();
     };
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      storeUser();
+    }
+  }, [user, storeUser]);
 
   useEffect(() => {
     if (musicRef.current) musicRef.current.volume = musicVolume;
@@ -348,8 +358,11 @@ export default function HookifyDashboard() {
 
   const handleGenerate = async () => {
     if (!productUrl) return alert("Please paste a link!");
+    
+    // ملاحظة: الـ Generate الآن مجاني للمعاينة كما طلبت
     setLoading(true);
     setLoadingStatus(`🔍 Analyzing ${selectedSource} Product...`);
+    
     try {
       const scrapeRes = await fetch("/api/generate/scrape", {
         method: "POST",
@@ -394,17 +407,25 @@ export default function HookifyDashboard() {
     } catch (error) { 
       setLoading(false);
       setLoadingStatus("");
-      alert("Something went wrong. Please try again.");
+      alert(error.message || "Something went wrong.");
     }
   };
 
   const handlePublish = async () => {
-    const activePlats = Object.values(selectedPlatforms).filter(Boolean).length;
-    if (activePlats === 0) return alert("Select at least one platform!");
+    const activePlats = Object.keys(selectedPlatforms).filter(key => selectedPlatforms[key]);
+    if (activePlats.length === 0) return alert("Select at least one platform!");
     if (allProductImages.length === 0) return alert("No product images found to create video!");
+
+    // --- 1. التحقق من الرصيد قبل الخصم ---
+    if (!userData || userData.credits < 1) {
+        return alert("❌ No credits available! Please recharge your account to publish.");
+    }
 
     setIsPublishing(true);
     try {
+        // --- 2. الخصم يحدث الآن عند الضغط على Publish ---
+        await deductCredits({ amount: 1 });
+
         const videoGenRes = await fetch("/api/generate/video-file", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -419,20 +440,27 @@ export default function HookifyDashboard() {
 
         if (!videoData.success) throw new Error("Video generation failed");
 
-        if (selectedPlatforms.google) {
+        for (const plt of activePlats) {
             await fetch("/api/upload", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     title: "AI Ad: " + activeHook.substring(0, 30),
                     videoPath: videoData.path,
+                    platform: plt
                 })
+            });
+
+            await logCampaignMutation({
+              productUrl: productUrl,
+              videoUrl: videoData.path,
+              platform: plt
             });
         }
 
-        alert(`🚀 Campaign Successfully Launched on ${activePlats} Platforms!`);
+        alert(`🚀 Campaign Successfully Launched! 1 Credit deducted.`);
     } catch (err) {
-        alert("Publishing Error: " + err.message);
+          alert("Publishing Error: " + err.message);
     } finally {
         setIsPublishing(false);
     }
@@ -441,13 +469,25 @@ export default function HookifyDashboard() {
   return (
     <div className="p-4 md:p-8 lg:p-10 max-w-[1700px] mx-auto text-white space-y-10 min-h-screen bg-[#020202]">
       <Header />
+      
+      {/* Credit Display */}
+      <div className="flex justify-end -mt-8 mb-4">
+         <div className="bg-zinc-900/60 border border-blue-500/20 px-4 py-2 rounded-2xl flex items-center gap-3">
+            <LightningBoltIcon className="text-blue-500 w-4 h-4 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Available Credits:</span>
+            <span className="text-sm font-black text-white">
+                {userData === undefined ? "..." : (userData?.credits ?? 0)}
+            </span>
+         </div>
+      </div>
+
       <div className="grid grid-cols-12 gap-8 items-stretch">
         
         {/* Left Column: Creative Engine */}
         <div className="col-span-12 lg:col-span-4 order-2 lg:order-1 flex flex-col gap-6">
           <div className="space-y-4">
             <StoreSelector />
-            <AdConnector userId="user_1" /> 
+            <AdConnector userId={userData?._id || "user_1"} /> 
           </div>
           
           <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] space-y-2 backdrop-blur-xl h-full flex flex-col shadow-2xl relative overflow-hidden">
