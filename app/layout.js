@@ -9,20 +9,22 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  // استخراج المفتاح من البيئة
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
   return (
-    // 1. ClerkProvider هو الغلاف الخارجي لإدارة الهوية
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+    <ClerkProvider publishableKey={clerkKey}>
       <html lang="en" className="dark" suppressHydrationWarning>
-        <body>
-          {/* 2. ConvexClientProvider يربط Clerk بقاعدة البيانات */}
+        <body suppressHydrationWarning>
+          {/* 1. ربط Clerk بقاعدة بيانات Convex */}
           <ConvexClientProvider>
-            {/* 3. ThemeProvider لإدارة شكل الموقع (Dark Mode) */}
+            {/* 2. إدارة الثيم (Dark Mode) */}
             <ThemeProvider
               attribute="class"
               defaultTheme="dark"
               enableSystem={false}
             >
-              {/* قمنا بحذف AuthProvider هنا لأنه كان تابعاً لـ Firebase */}
+              {/* محتوى التطبيق */}
               {children}
             </ThemeProvider>
           </ConvexClientProvider>

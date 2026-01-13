@@ -14,6 +14,7 @@ import {
   SpeakerModerateIcon,
   Cross2Icon 
 } from "@radix-ui/react-icons";
+export const dynamic = "force-dynamic";
 
 // --- Sub-components ---
 import Header from "./_components/Header";
