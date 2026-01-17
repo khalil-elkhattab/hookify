@@ -1,4 +1,5 @@
 import "./globals.css";
+export const dynamic = "force-dynamic";
 import { ThemeProvider } from "../components/ui/provider";
 import ConvexClientProvider from "./ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs"; // أضف هذا
