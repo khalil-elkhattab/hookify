@@ -2,12 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   env: {
-    // هذا السطر يضمن وصول المفتاح لـ Clerk أثناء الـ Build
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   },
-  // تجاهل الأخطاء التي تمنع الرفع
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
+  // تم حذف قسم eslint لأنه غير مدعوم في النسخة 16 ويسبب فشل الرفع
+  typescript: { 
+    ignoreBuildErrors: true 
+  },
   output: 'standalone',
 };
 
