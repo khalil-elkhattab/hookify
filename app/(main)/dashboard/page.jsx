@@ -238,24 +238,30 @@ export default function HookifyDashboard() {
     if (typeof window !== "undefined" && window.Paddle) {
       window.Paddle.Environment.set('sandbox'); 
       window.Paddle.Initialize({ 
-        token: "test_805908696789f553316f7347913", 
+        token: "test_805908696789f553316f7347913", // تأكد من أنه التوكن الطويل
       });
     }
   };
 
   const handleCheckout = () => {
     if (typeof window !== "undefined" && window.Paddle) {
-      window.Paddle.Environment.set('sandbox');
+      window.Paddle.Environment.set('sandbox'); // تأكيد البيئة
       window.Paddle.Checkout.open({
         settings: {
           displayMode: "overlay",
           theme: "dark",
           locale: "en",
-          frameTarget: "paddle_checkout",
-          allowLogout: false,
+          frameTarget: "paddle_checkout", // يساعد في استقرار الـ Frame
         },
-        items: [{ priceId: "pri_01kf61n4baz0tc38zzfbswxabw", quantity: 1 }],
-        customer: { email: user?.emailAddresses[0]?.emailAddress || "" }
+        items: [
+          { 
+            priceId: "pri_01kf61n4baz0tc38zzfbswxabw", 
+            quantity: 1 
+          }
+        ],
+        customer: { 
+          email: user?.emailAddresses[0]?.emailAddress || "" 
+        }
       });
     }
   };
