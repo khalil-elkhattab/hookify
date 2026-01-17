@@ -1,7 +1,6 @@
 // @ts-nocheck
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import Script from "next/script";
 import { 
   Link2Icon, MixerHorizontalIcon, 
   PlayIcon, ChevronDownIcon, 
@@ -36,7 +35,7 @@ function AdConnector({ userId }) {
   ];
 
   return (
-    <section className="bg-zinc-900/40 border border-white/5 p-5 rounded-3xl space-y-3 shadow-inner">
+    <section className="bg-zinc-900/40 border border-white/5 p-5 rounded-3xl space-y-3 shadow-inner text-white">
       <div className="flex justify-between items-center">
         <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Ad Channels</h3>
         <span className="text-[9px] bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">
@@ -57,7 +56,6 @@ function AdConnector({ userId }) {
               ) : (
                 <button 
                   onClick={() => window.location.href = p.authUrl} 
-                  title={`Connect to ${p.name}`}
                   className="text-[9px] font-black text-blue-500 hover:text-white transition-colors border border-blue-500/10 px-2 py-1 rounded-md hover:bg-blue-600"
                 >
                   CONNECT API
@@ -81,12 +79,10 @@ function ProductSourceSelector({ onSelect, selected }) {
   return (
     <div className="space-y-2 mb-6">
       <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Product Source</p>
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" role="radiogroup" aria-label="Select product source">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" role="radiogroup">
         {sources.map((src) => (
           <button 
             key={src.id} 
-            role="radio"
-            aria-checked={selected === src.id}
             onClick={() => onSelect(src.id)} 
             className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 border shrink-0 ${selected === src.id ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-black/40 text-zinc-500 border-white/5 hover:border-white/10'}`}
           >
@@ -114,7 +110,7 @@ function StoreSelector() {
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full text-white">
       <button 
         onClick={() => setIsOpen(!isOpen)} 
         className="w-full bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 p-4 rounded-2xl flex items-center justify-between transition-all group shadow-sm"
@@ -147,7 +143,7 @@ function StoreSelector() {
             <div className="pt-2 border-t border-white/5 mt-2 flex gap-2">
               <input 
                 type="text" 
-                placeholder="store-name.myshopify.com" 
+                placeholder="store.myshopify.com" 
                 value={newStoreUrl} 
                 onChange={(e) => setNewStoreUrl(e.target.value)} 
                 className="flex-1 bg-black border border-zinc-800 rounded-lg px-3 py-2 text-[10px] outline-none text-white focus:border-blue-500" 
@@ -233,37 +229,34 @@ export default function HookifyDashboard() {
     } else if (!isPlaying) { setVisibleWords([]); }
   }, [activeHook, isPlaying]);
 
+  // --- Fixed Paddle Logic ---
   const handleCheckout = () => {
     if (typeof window !== "undefined" && window.Paddle) {
-      try {
-        window.Paddle.Environment.set("sandbox");
-        
-        // استخدام i صغيرة كما في V2
-        window.Paddle.initialize({ 
-          token: "test_805908696789f553316f7347913" 
-        });
+      // 1. Initialize carefully
+      window.Paddle.Environment.set("sandbox"); 
+      window.Paddle.Initialize({ 
+        token: "test_805908696789f553316f7347913" 
+      });
 
-        window.Paddle.Checkout.open({
-          settings: {
-            displayMode: "overlay",
-            theme: "dark",
-            locale: "en",
-          },
-          items: [
-            { 
-              priceId: "pri_01kf61n4baz0tc38zzfbswxabw", 
-              quantity: 1 
-            }
-          ],
-          customer: { 
-            email: user?.emailAddresses[0]?.emailAddress || "" 
+      // 2. Open Checkout
+      window.Paddle.Checkout.open({
+        settings: {
+          displayMode: "overlay",
+          theme: "dark",
+          locale: "en",
+        },
+        items: [
+          { 
+            priceId: "pri_01kf61n4baz0tc38zzfbswxabw", 
+            quantity: 1 
           }
-        });
-      } catch (error) {
-        console.error("Paddle error:", error);
-      }
+        ],
+        customer: { 
+          email: user?.emailAddresses[0]?.emailAddress || "" 
+        }
+      });
     } else {
-      alert("System is initializing, please click again in 2 seconds.");
+      alert("Billing system is loading, please try in 3 seconds...");
     }
   };
 
@@ -380,11 +373,6 @@ export default function HookifyDashboard() {
 
   return (
     <main className="p-4 md:p-8 lg:p-10 max-w-[1700px] mx-auto text-white space-y-10 min-h-screen bg-[#020202]">
-      <title>Dashboard - Hookify Ad AI</title>
-      <Script 
-        src="https://cdn.paddle.com/paddle/paddle.js" 
-        strategy="lazyOnload"
-      />
       <Header />
       
       <div className="flex justify-end -mt-8 mb-4 gap-3">
@@ -402,6 +390,7 @@ export default function HookifyDashboard() {
       </div>
 
       <div className="grid grid-cols-12 gap-8 items-stretch">
+        {/* Left Column: Creative Engine */}
         <div className="col-span-12 lg:col-span-4 order-2 lg:order-1 flex flex-col gap-6">
           <div className="space-y-4">
             <StoreSelector />
@@ -505,6 +494,7 @@ export default function HookifyDashboard() {
           </div>
         </div>
 
+        {/* Center Column: Preview Phone */}
         <div className="col-span-12 lg:col-span-4 order-1 lg:order-2 flex flex-col justify-center items-center gap-6">
           <div className="bg-[#050505] border-[12px] border-[#1a1a1a] rounded-[3.5rem] aspect-[9/16] w-full max-w-[320px] relative shadow-2xl overflow-hidden ring-1 ring-white/10 group">
             <div className="absolute top-4 inset-x-8 h-1 bg-white/10 rounded-full overflow-hidden z-50">
@@ -572,6 +562,7 @@ export default function HookifyDashboard() {
           </div>
         </div>
 
+        {/* Right Column: Ads Queue */}
         <div className="col-span-12 lg:col-span-4 order-3 flex flex-col gap-6">
             <AdsQueue />
         </div>
