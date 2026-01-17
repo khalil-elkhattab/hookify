@@ -116,7 +116,6 @@ function StoreSelector() {
     <div className="relative w-full">
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        title="Toggle Store Selection"
         className="w-full bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 p-4 rounded-2xl flex items-center justify-between transition-all group shadow-sm"
       >
         <div className="flex items-center gap-3">
@@ -133,7 +132,7 @@ function StoreSelector() {
         <ChevronDownIcon className={`text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 w-full mt-2 bg-zinc-900 border border-white/10 rounded-2xl p-4 z-50 shadow-2xl backdrop-blur-xl" style={{ WebkitBackdropFilter: 'blur(20px)' }}>
+        <div className="absolute top-full left-0 w-full mt-2 bg-zinc-900 border border-white/10 rounded-2xl p-4 z-50 shadow-2xl backdrop-blur-xl">
           <div className="space-y-3">
             {stores.map((store) => (
               <div key={store._id} className="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5">
@@ -147,13 +146,12 @@ function StoreSelector() {
             <div className="pt-2 border-t border-white/5 mt-2 flex gap-2">
               <input 
                 type="text" 
-                title="Store URL"
                 placeholder="store-name.myshopify.com" 
                 value={newStoreUrl} 
                 onChange={(e) => setNewStoreUrl(e.target.value)} 
                 className="flex-1 bg-black border border-zinc-800 rounded-lg px-3 py-2 text-[10px] outline-none text-white focus:border-blue-500" 
               />
-              <button onClick={handleAddStore} title="Add Store" className="bg-blue-600 hover:bg-blue-500 p-2 rounded-lg transition-colors">
+              <button onClick={handleAddStore} className="bg-blue-600 hover:bg-blue-500 p-2 rounded-lg transition-colors">
                 <PlusIcon className="w-4 h-4 text-white" />
               </button>
             </div>
@@ -234,24 +232,23 @@ export default function HookifyDashboard() {
     } else if (!isPlaying) { setVisibleWords([]); }
   }, [activeHook, isPlaying]);
 
-  const initPaddle = () => {
-    if (typeof window !== "undefined" && window.Paddle) {
-      window.Paddle.Environment.set('sandbox'); 
-      window.Paddle.Initialize({ 
-        token: "test_805908696789f553316f7347913", // تأكد من أنه التوكن الطويل
-      });
-    }
-  };
-
+  // --- التعديل الجوهري: استخدام Paddle.Checkout.open لفتح النافذة داخل الموقع ---
   const handleCheckout = () => {
     if (typeof window !== "undefined" && window.Paddle) {
-      window.Paddle.Environment.set('sandbox'); // تأكيد البيئة
+      // إعداد البيئة التجريبية
+      window.Paddle.Environment.set("sandbox");
+      
+      // تهيئة المكتبة بالـ Token الخاص بك
+      window.Paddle.Initialize({ 
+        token: "test_805908696789f553316f7347913" 
+      });
+
+      // فتح نافذة الدفع بنمط Overlay
       window.Paddle.Checkout.open({
         settings: {
           displayMode: "overlay",
           theme: "dark",
           locale: "en",
-          frameTarget: "paddle_checkout", // يساعد في استقرار الـ Frame
         },
         items: [
           { 
@@ -263,6 +260,8 @@ export default function HookifyDashboard() {
           email: user?.emailAddresses[0]?.emailAddress || "" 
         }
       });
+    } else {
+      alert("Paddle library is still loading, please try again in a second.");
     }
   };
 
@@ -380,9 +379,11 @@ export default function HookifyDashboard() {
   return (
     <main className="p-4 md:p-8 lg:p-10 max-w-[1700px] mx-auto text-white space-y-10 min-h-screen bg-[#020202]">
       <title>Dashboard - Hookify Ad AI</title>
+      
+      {/* تحميل مكتبة Paddle V2 */}
       <Script 
-        src="https://cdn.paddle.com/paddle/v2/paddle.js" 
-        onLoad={initPaddle} 
+        src="https://cdn.paddle.com/paddle/paddle.js" 
+        strategy="afterInteractive"
       />
       
       <Header />
@@ -395,7 +396,6 @@ export default function HookifyDashboard() {
           </div>
           <button 
             onClick={handleCheckout} 
-            title="Recharge Credits"
             className="bg-blue-600 hover:bg-white hover:text-black text-white text-[10px] font-black px-4 py-2 rounded-2xl transition-all shadow-lg shadow-blue-600/20"
           >
             RECHARGE
@@ -408,20 +408,18 @@ export default function HookifyDashboard() {
             <StoreSelector />
             <AdConnector userId={userData?._id || "user_1"} /> 
           </div>
-          <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] space-y-2 backdrop-blur-xl h-full flex flex-col shadow-2xl relative overflow-hidden" style={{ WebkitBackdropFilter: 'blur(20px)' }}>
+          <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] space-y-2 backdrop-blur-xl h-full flex flex-col shadow-2xl relative overflow-hidden">
             <h3 className="font-bold flex items-center gap-2 text-blue-500 uppercase text-xs tracking-[0.2em] italic mb-6">
-              <MixerHorizontalIcon aria-hidden="true" /> Creative Engine
+              <MixerHorizontalIcon /> Creative Engine
             </h3>
             <div className="space-y-6 flex-1">
               <ProductSourceSelector selected={selectedSource} onSelect={setSelectedSource} />
               
               <div className="space-y-2">
-                <label htmlFor="product-url" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Paste Product Link</label>
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Paste Product Link</label>
                 <div className="relative group">
                    <input 
-                     id="product-url"
                      type="text" 
-                     title="Product URL"
                      value={productUrl} 
                      onChange={(e) => setProductUrl(e.target.value)} 
                      placeholder="Paste link..." 
@@ -434,27 +432,21 @@ export default function HookifyDashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center ml-1">
                   <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Ad Assets</span>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()} 
-                    title="Upload Assets"
-                    className="text-[9px] font-bold text-blue-500 hover:text-white transition-colors flex items-center gap-1"
-                  >
+                  <button onClick={() => fileInputRef.current?.click()} className="text-[9px] font-bold text-blue-500 hover:text-white transition-colors flex items-center gap-1">
                     <PlusIcon className="w-3 h-3" /> UPLOAD
                   </button>
-                  <input type="file" title="Upload Image" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide min-h-[70px]">
                   {allProductImages.map((img, i) => (
                     <div key={i} className="relative group shrink-0">
                       <img 
                         src={img} 
-                        alt=""
                         onClick={() => setCurrentImageIndex(i)} 
                         className={`w-14 h-14 rounded-xl object-cover border-2 transition-all cursor-pointer ${currentImageIndex === i ? 'border-blue-500 scale-105 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-60'}`} 
                       />
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleRemoveImage(i); }} 
-                        title="Remove Image"
                         className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Cross2Icon className="w-3 h-3" />
@@ -466,27 +458,21 @@ export default function HookifyDashboard() {
 
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div className="space-y-2">
-                   <label htmlFor="voice-lang" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Voice</label>
+                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Voice</label>
                    <select 
-                     id="voice-lang"
-                     title="Voice Language"
                      value={selectedLanguage} 
                      onChange={(e) => setSelectedLanguage(e.target.value)} 
                      className="w-full bg-black border border-zinc-800 rounded-xl p-3 outline-none focus:border-blue-500"
-                     style={{ WebkitAppearance: 'none', appearance: 'none' }}
                    >
                     {languages.map(l => <option key={l} value={l}>{l}</option>)}
                    </select>
                 </div>
                 <div className="space-y-2">
-                   <label htmlFor="video-style" className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Style</label>
+                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Style</label>
                    <select 
-                     id="video-style"
-                     title="Video Style"
                      value={selectedStyle} 
                      onChange={(e) => setSelectedStyle(e.target.value)} 
                      className="w-full bg-black border border-zinc-800 rounded-xl p-3 outline-none focus:border-blue-500"
-                     style={{ WebkitAppearance: 'none', appearance: 'none' }}
                    >
                     {videoStyles.map(s => <option key={s} value={s}>{s}</option>)}
                    </select>
@@ -501,7 +487,6 @@ export default function HookifyDashboard() {
                   {backgroundTracks.map((track) => (
                     <button 
                       key={track.id} 
-                      title={`Select ${track.label}`}
                       onClick={() => setSelectedMusic(track.id)} 
                       className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-tighter border transition-all flex items-center gap-1.5 ${selectedMusic === track.id ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-black/40 border-white/5 text-zinc-500'}`}
                     >
@@ -514,7 +499,6 @@ export default function HookifyDashboard() {
             <button 
               onClick={handleGenerate} 
               disabled={loading} 
-              title="Generate Ad"
               className={`relative overflow-hidden w-full py-5 rounded-2xl font-black text-xs tracking-[0.3em] transition-all shadow-xl mt-6 ${loading ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-blue-600 hover:bg-white hover:text-black"}`}
             >
               {loading ? loadingStatus : "GENERATE 30s ADS"}
@@ -525,16 +509,15 @@ export default function HookifyDashboard() {
         <div className="col-span-12 lg:col-span-4 order-1 lg:order-2 flex flex-col justify-center items-center gap-6">
           <div className="bg-[#050505] border-[12px] border-[#1a1a1a] rounded-[3.5rem] aspect-[9/16] w-full max-w-[320px] relative shadow-2xl overflow-hidden ring-1 ring-white/10 group">
             <div className="absolute top-4 inset-x-8 h-1 bg-white/10 rounded-full overflow-hidden z-50">
-                <div className="h-full bg-blue-500 transition-all duration-100 ease-linear shadow-[0_0_10px_#3b82f6]" style={{ width: `${audioProgress}%` }} />
+                <div className="h-full bg-blue-500 transition-all duration-100 ease-linear" style={{ width: `${audioProgress}%` }} />
             </div>
 
             <div className="absolute top-0 inset-x-0 h-[65%] z-0 flex items-center justify-center bg-[#080808] overflow-hidden">
                 {allProductImages.length > 0 ? (
                   allProductImages.map((img, idx) => (
-                    <img key={idx} src={img} alt="" style={{ 
+                    <img key={idx} src={img} style={{ 
                         display: idx === currentImageIndex ? 'block' : 'none',
                         transform: `scale(${1.15 + (audioLevel / 220)})`,
-                        filter: `brightness(${1 + audioLevel / 150})`,
                         transition: 'transform 0.1s'
                     }} className="w-[85%] h-[80%] object-contain z-10" />
                   ))
@@ -549,20 +532,20 @@ export default function HookifyDashboard() {
                     visibleWords.map((word, idx) => `<span style="color: ${idx === visibleWords.length - 1 ? '#3b82f6' : 'white'};" class="text-[18px] font-[1000] italic uppercase tracking-tighter">${word}</span>`).join(' ') 
                     : `<span class="text-[11px] text-zinc-400 italic font-bold text-center">${activeHook}</span>` 
                   }}
-                  className={`flex flex-wrap justify-center gap-x-1.5 gap-y-1 text-center outline-none ${!isPlaying ? 'border border-dashed border-white/10 rounded-xl p-3 bg-white/5' : ''}`}
+                  className="flex flex-wrap justify-center gap-x-1.5 gap-y-1 text-center outline-none"
                 />
             </div>
           </div>
           
-          <div className="w-full max-w-[320px] bg-zinc-900/40 border border-white/5 p-4 rounded-3xl backdrop-blur-md space-y-4" style={{ WebkitBackdropFilter: 'blur(10px)' }}>
+          <div className="w-full max-w-[320px] bg-zinc-900/40 border border-white/5 p-4 rounded-3xl backdrop-blur-md space-y-4">
             <div className="flex items-center gap-4">
               <SpeakerLoudIcon className="text-zinc-500 w-4 h-4" />
-              <input type="range" title="Voice Volume" min="0" max="1" step="0.05" value={voiceVolume} onChange={(e) => setVoiceVolume(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500" style={{ WebkitAppearance: 'none' }} />
+              <input type="range" min="0" max="1" step="0.05" value={voiceVolume} onChange={(e) => setVoiceVolume(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
               <span className="text-[9px] font-bold text-zinc-600 w-8">VOICE</span>
             </div>
             <div className="flex items-center gap-4">
               <SpeakerModerateIcon className="text-zinc-500 w-4 h-4" />
-              <input type="range" title="Music Volume" min="0" max="0.5" step="0.01" value={musicVolume} onChange={(e) => setMusicVolume(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" style={{ WebkitAppearance: 'none' }} />
+              <input type="range" min="0" max="0.5" step="0.01" value={musicVolume} onChange={(e) => setMusicVolume(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" />
               <span className="text-[9px] font-bold text-zinc-600 w-8">MUSIC</span>
             </div>
           </div>
@@ -573,9 +556,8 @@ export default function HookifyDashboard() {
               {['tiktok', 'meta', 'google'].map((plt) => (
                 <button 
                   key={plt} 
-                  title={`Select ${plt}`}
                   onClick={() => togglePlatform(plt)} 
-                  className={`flex-1 py-3 rounded-2xl border transition-all ${selectedPlatforms[plt] ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-500/10' : 'bg-black/40 border-white/5 text-zinc-600 opacity-50'}`}
+                  className={`flex-1 py-3 rounded-2xl border transition-all ${selectedPlatforms[plt] ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg' : 'bg-black/40 border-white/5 text-zinc-600 opacity-50'}`}
                 >
                   <span className="text-[10px] font-black uppercase tracking-tighter">{plt}</span>
                 </button>
@@ -584,17 +566,9 @@ export default function HookifyDashboard() {
             <button 
               onClick={handlePublish} 
               disabled={isPublishing} 
-              title="Launch Campaign"
               className={`w-full py-4 rounded-2xl font-black text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${isPublishing ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-white text-black hover:bg-blue-500 hover:text-white'}`}
             >
               {isPublishing ? <UpdateIcon className="animate-spin" /> : <RocketIcon />} {isPublishing ? "LAUNCHING..." : "START AD CAMPAIGN"}
-            </button>
-            <button 
-              onClick={() => window.location.href = "mailto:support@hookify.ai?subject=Support Request"}
-              title="Contact Support"
-              className="w-full text-[9px] font-black text-zinc-600 hover:text-blue-400 transition-colors uppercase py-2"
-            >
-              Contact Support
             </button>
           </div>
         </div>
