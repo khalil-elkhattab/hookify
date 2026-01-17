@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import Script from "next/script";
@@ -44,7 +45,7 @@ function AdConnector({ userId }) {
       </div>
       <div className="grid grid-cols-1 gap-2">
         {platforms.map((p) => {
-          const isConnected = accounts.some(acc => acc.platform === p.id);
+          const isConnected = accounts.some((acc) => acc.platform === p.id);
           return (
             <div key={p.id} className="flex items-center justify-between p-3 bg-black/40 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
               <div className="flex items-center gap-3">
@@ -232,43 +233,44 @@ export default function HookifyDashboard() {
     } else if (!isPlaying) { setVisibleWords([]); }
   }, [activeHook, isPlaying]);
 
-  // --- التعديل الجوهري: استخدام Paddle.Checkout.open لفتح النافذة داخل الموقع ---
   const handleCheckout = () => {
     if (typeof window !== "undefined" && window.Paddle) {
-      // إعداد البيئة التجريبية
-      window.Paddle.Environment.set("sandbox");
-      
-      // تهيئة المكتبة بالـ Token الخاص بك
-      window.Paddle.Initialize({ 
-        token: "test_805908696789f553316f7347913" 
-      });
+      try {
+        window.Paddle.Environment.set("sandbox");
+        
+        // استخدام i صغيرة كما في V2
+        window.Paddle.initialize({ 
+          token: "test_805908696789f553316f7347913" 
+        });
 
-      // فتح نافذة الدفع بنمط Overlay
-      window.Paddle.Checkout.open({
-        settings: {
-          displayMode: "overlay",
-          theme: "dark",
-          locale: "en",
-        },
-        items: [
-          { 
-            priceId: "pri_01kf61n4baz0tc38zzfbswxabw", 
-            quantity: 1 
+        window.Paddle.Checkout.open({
+          settings: {
+            displayMode: "overlay",
+            theme: "dark",
+            locale: "en",
+          },
+          items: [
+            { 
+              priceId: "pri_01kf61n4baz0tc38zzfbswxabw", 
+              quantity: 1 
+            }
+          ],
+          customer: { 
+            email: user?.emailAddresses[0]?.emailAddress || "" 
           }
-        ],
-        customer: { 
-          email: user?.emailAddresses[0]?.emailAddress || "" 
-        }
-      });
+        });
+      } catch (error) {
+        console.error("Paddle error:", error);
+      }
     } else {
-      alert("Paddle library is still loading, please try again in a second.");
+      alert("System is initializing, please click again in 2 seconds.");
     }
   };
 
   const togglePlatform = (id) => setSelectedPlatforms(prev => ({ ...prev, [id]: !prev[id] }));
   
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       setAllProductImages(prev => [imageUrl, ...prev]);
@@ -379,13 +381,10 @@ export default function HookifyDashboard() {
   return (
     <main className="p-4 md:p-8 lg:p-10 max-w-[1700px] mx-auto text-white space-y-10 min-h-screen bg-[#020202]">
       <title>Dashboard - Hookify Ad AI</title>
-      
-      {/* تحميل مكتبة Paddle V2 */}
       <Script 
         src="https://cdn.paddle.com/paddle/paddle.js" 
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
-      
       <Header />
       
       <div className="flex justify-end -mt-8 mb-4 gap-3">
