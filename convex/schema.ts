@@ -7,7 +7,8 @@ export default defineSchema({
     name: v.string(),
     email: v.string(),
     imageUrl: v.string(),
-    credits: v.float64(),
+    // تم التغيير إلى v.number() ليتوافق مع عمليات الجمع والطرح البسيطة
+    credits: v.number(), 
     isSubscribed: v.boolean(),
     settings: v.optional(v.any()), 
   })
@@ -16,7 +17,7 @@ export default defineSchema({
 
   adAccounts: defineTable({
     userId: v.id("users"), 
-    platform: v.string(),
+    platform: v.string(), // "facebook", "tiktok", etc.
     platformName: v.string(),
     accessToken: v.optional(v.string()),
     refreshToken: v.optional(v.string()),

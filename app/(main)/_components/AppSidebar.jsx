@@ -122,14 +122,16 @@ export default function AppSidebar({ email }) {
                     <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.15em]">System Credits</p>
                   </div>
                   <span className={`text-[11px] font-bold tabular-nums ${!hasCredits ? 'text-rose-500' : 'text-blue-500'}`}>
-                    {user ? `${user.credits}/5` : "--"}
+                    {/* تم التعديل هنا ليكون من 10 */}
+                    {user ? `${user.credits}/10` : "--"}
                   </span>
                 </div>
                 
                 <div className="w-full bg-white/5 rounded-full h-1 mb-4 overflow-hidden">
                   <div 
                     className={`h-full transition-all duration-1000 ease-out ${hasCredits ? "bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)]" : "bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.5)]"}`}
-                    style={{ width: `${user ? (user.credits / 5) * 100 : 0}%` }}
+                    /* تم التعديل هنا ليكون الحساب من 10 */
+                    style={{ width: `${user ? (user.credits / 10) * 100 : 0}%` }}
                   ></div>
                 </div>
 
@@ -138,26 +140,28 @@ export default function AppSidebar({ email }) {
                     onClick={() => setShowPaywall(true)}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 text-[10px] font-black tracking-widest text-white hover:shadow-[0_0_20px_rgba(225,29,72,0.4)] transition-all active:scale-[0.97]"
                   >
-                    <Sparkles className="w-3 h-3 fill-white" />
-                    RECHARGE ENGINE
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Sparkles className="w-3 h-3 fill-white" />
+                      RECHARGE ENGINE
+                    </span>
                   </button>
                 ) : (
                   <div className="flex items-center justify-between px-1" onClick={() => setShowPaywall(true)} style={{cursor: 'pointer'}}>
-                     <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Active Plan</span>
-                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Active Plan</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   </div>
                 )}
               </div>
           </div>
 
           <div className="flex items-center justify-between px-4 py-2 bg-white/[0.02] rounded-2xl border border-white/5">
-             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-400">
                   {email?.charAt(0).toUpperCase() || "U"}
                 </div>
                 <span className="text-[10px] font-medium text-zinc-500 truncate max-w-[80px]">{email}</span>
-             </div>
-             <Settings className="w-3.5 h-3.5 text-zinc-700 hover:text-white cursor-pointer transition-colors" />
+              </div>
+              <Settings className="w-3.5 h-3.5 text-zinc-700 hover:text-white cursor-pointer transition-colors" />
           </div>
         </div>
       </aside>
