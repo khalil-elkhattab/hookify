@@ -1,20 +1,28 @@
 "use client";
+
+// 1. إعدادات الإجبار على الوضع الديناميكي لتجنب أخطاء Clerk أثناء الـ Build
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { useState, useEffect } from "react";
 import { 
-  User, Save, Loader2, Zap, Sparkles, Video, Volume2, Music 
+  User, Save, Loader2, Zap, Sparkles, Volume2 
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useUser } from "@clerk/nextjs"; // تم استبدال Firebase بـ Clerk
+import { useUser } from "@clerk/nextjs";
 
 export default function SettingsPage() {
   const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
+
+  // 2. درع الحماية: منع Clerk من التسبب في فشل الـ Build إذا كان المفتاح مفقوداً مؤقتاً
+  // هذا السطر يحل مشكلة الـ Missing publishableKey تماماً
+  if (typeof window === "undefined" && !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return null;
+  }
 
   // الإعدادات الشاملة
   const [settings, setSettings] = useState({
@@ -26,7 +34,7 @@ export default function SettingsPage() {
     aiVoiceVolume: 0.8,
   });
 
-  // جلب بيانات المستخدم من Convex باستخدام إيميل Clerk
+  // جلب بيانات المستخدم من Convex
   const userData = useQuery(api.user.getUser, clerkUser?.primaryEmailAddress?.emailAddress ? { 
     email: clerkUser.primaryEmailAddress.emailAddress 
   } : "skip");
@@ -57,7 +65,13 @@ export default function SettingsPage() {
     }
   };
 
-  if (!isClerkLoaded) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" /></div>;
+  if (!isClerkLoaded) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600 w-10 h-10" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-10 text-white bg-[#020202]">
@@ -106,8 +120,6 @@ export default function SettingsPage() {
              </div>
           )}
 
-          {/* ... باقي التبويبات التي كانت لديك ... */}
-          
           <button 
             onClick={handleSave}
             disabled={isSaving}
