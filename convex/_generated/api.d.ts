@@ -9,8 +9,11 @@
  */
 
 import type * as adAccounts from "../adAccounts.js";
+import type * as cultureData from "../cultureData.js";
 import type * as functions_addCredits from "../functions/addCredits.js";
 import type * as functions_createUser from "../functions/createUser.js";
+import type * as generate from "../generate.js";
+import type * as hooks from "../hooks.js";
 import type * as platforms from "../platforms.js";
 import type * as scraper from "../scraper.js";
 import type * as social from "../social.js";
@@ -26,8 +29,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   adAccounts: typeof adAccounts;
+  cultureData: typeof cultureData;
   "functions/addCredits": typeof functions_addCredits;
   "functions/createUser": typeof functions_createUser;
+  generate: typeof generate;
+  hooks: typeof hooks;
   platforms: typeof platforms;
   scraper: typeof scraper;
   social: typeof social;

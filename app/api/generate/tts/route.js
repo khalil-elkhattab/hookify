@@ -1,37 +1,36 @@
+import { ElevenLabsClient } from "elevenlabs";
 import { NextResponse } from "next/server";
+
+const client = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY, 
+});
 
 export async function POST(req) {
   try {
-    const { text, language } = await req.json();
-    
-    if (!text) {
-      return NextResponse.json({ error: "No text provided" }, { status: 400 });
+    const { text } = await req.json();
+
+    const audioStream = await client.textToSpeech.convert(
+      "pNInz6obpgDQGcFmaJgB", // صوت Adam
+      {
+        text: text,
+        model_id: "eleven_multilingual_v2",
+        output_format: "mp3_44100_128",
+      }
+    );
+
+    // تحويل الـ Stream إلى Buffer
+    const chunks = [];
+    for await (const chunk of audioStream) {
+      chunks.push(chunk);
     }
+    const audioBuffer = Buffer.concat(chunks);
 
-    // تحديد كود اللغة (مثلاً ar-SA أو en-US)
-    const langCode = language?.toLowerCase().includes("arabic") ? "ar" : "en";
-    
-    // استخدام رابط Google TTS المجاني لتحويل النص لصوت
-    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
-      text
-    )}&tl=${langCode}&client=tw-ob`;
-
-    const response = await fetch(ttsUrl);
-    
-    if (!response.ok) throw new Error("Failed to fetch from Google TTS");
-
-    const audioBuffer = await response.arrayBuffer();
-
-    // إرجاع الملف كصوت حقيقي وليس JSON
     return new Response(audioBuffer, {
-      headers: {
-        "Content-Type": "audio/mpeg", // يخبر المتصفح أن هذا ملف صوتي مدعوم
-        "Content-Length": audioBuffer.byteLength.toString(),
-      },
+      headers: { "Content-Type": "audio/mpeg" },
     });
 
   } catch (error) {
-    console.error("TTS Route Error:", error);
-    return NextResponse.json({ error: "TTS failed to generate audio" }, { status: 500 });
+    console.error("ElevenLabs API Error:", error);
+    return NextResponse.json({ error: error.message }, { status: error.statusCode || 500 });
   }
 }

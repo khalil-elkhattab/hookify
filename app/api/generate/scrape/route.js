@@ -1,80 +1,53 @@
 import { NextResponse } from "next/server";
-import * as cheerio from "cheerio";
 
-export async function POST(req) { // حذفنا : Request
+export async function POST(req) {
   try {
-    const { productUrl, source } = await req.json();
+    const { productUrl } = await req.json(); 
+    const apiKey = process.env.RAPIDAPI_KEY;
+    const apiHost = process.env.RAPIDAPI_HOST;
 
-    if (!productUrl) {
-      return NextResponse.json({ success: false, error: "URL is required" }, { status: 400 });
-    }
+    console.log(`🚀 [Scraper] Viral Hunt Started for: ${productUrl}`);
 
-    // --- 1. المسار السريع لـ Shopify ---
-    if (source === "shopify" || productUrl.includes("myshopify.com")) {
-      try {
-        const cleanUrl = productUrl.split('?')[0]; 
-        const response = await fetch(`${cleanUrl}.js`);
-        if (response.ok) {
-          const data = await response.json();
-          return NextResponse.json({
-            success: true,
-            title: data.title,
-            description: data.description?.replace(/<[^>]*>?/gm, '').slice(0, 200),
-            mainImage: data.featured_image,
-            allImages: data.images.map((img) => img.startsWith('http') ? img : `https:${img}`),
-            sourceType: "shopify_api"
-          });
-        }
-      } catch (e) {
-        console.log("Shopify API failed, falling back to Scraper...");
-      }
-    }
+    const apiUrl = `https://${apiHost}/feed/search?keywords=${encodeURIComponent(productUrl)}&count=10&cursor=0&region=US`;
 
-    // --- 2. المسار العام (AliExpress / CJ / Others) باستخدام Cheerio ---
-    const response = await fetch(productUrl, {
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-      },
-    });
-
-    if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    
-    const title = $('meta[property="og:title"]').attr('content') || $("title").text().trim();
-    const description = $('meta[property="og:description"]').attr('content') || "";
-    
-    const images = []; // حذفنا تحديد النوع : string[]
-    const ogImage = $('meta[property="og:image"]').attr('content');
-    if (ogImage) images.push(ogImage);
-
-    $("img").each((i, el) => {
-      let src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-old-hires");
-      if (src) {
-        if (src.startsWith("//")) src = "https:" + src;
-        if (src.startsWith("/") && !src.startsWith("http")) {
-          const urlObj = new URL(productUrl);
-          src = urlObj.origin + src;
-        }
-        const isNotIcon = !/icon|logo|sprite|css|avatar|flag/i.test(src);
-        if (src.startsWith("http") && isNotIcon) images.push(src);
+        'x-rapidapi-key': apiKey,
+        'x-rapidapi-host': apiHost
       }
     });
 
-    const uniqueImages = [...new Set(images)];
+    const result = await response.json();
+    const videos = result.data?.videos || result.aweme_list || [];
+
+    if (videos.length === 0) {
+      return NextResponse.json({ success: false, error: "لم يتم العثور على فيديوهات." });
+    }
+
+    // تحديد عدد الفيديوهات المطلوب جلبها (مثلاً 3)
+    const numberOfVideos = 3;
+    
+    // استخراج بيانات أول 3 فيديوهات صالحة
+    const topVideos = videos.slice(0, numberOfVideos).map(videoData => ({
+      videoUrl: videoData.hdplay || videoData.play || videoData.video_url,
+      title: videoData.title || videoData.desc || productUrl,
+      stats: {
+        views: videoData.play_count || videoData.statistics?.play_count || 0,
+        likes: videoData.digg_count || videoData.statistics?.digg_count || 0
+      }
+    })).filter(v => v.videoUrl); // التأكد من وجود رابط للفيديو
+
+    console.log(`✅ Found ${topVideos.length} viral videos`);
 
     return NextResponse.json({
       success: true,
-      title: title || "Product Found",
-      description: description,
-      mainImage: uniqueImages[0] || "",
-      allImages: uniqueImages.slice(0, 15),
-      sourceType: "general_scraper"
+      videos: topVideos, // نرسل مصفوفة كاملة هنا
+      title: topVideos[0]?.title || productUrl // العنوان الافتراضي من أول فيديو
     });
 
-  } catch (error) { // حذفنا : any
-    console.error("Scraper Error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error("❌ Scraper Critical Error:", error);
+    return NextResponse.json({ success: false, error: "فشل الاتصال بالـ API" });
   }
 }

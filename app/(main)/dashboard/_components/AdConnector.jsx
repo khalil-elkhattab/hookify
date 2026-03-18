@@ -5,8 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { 
   PlusIcon, 
   CheckCircledIcon, 
-  ChevronDownIcon,
-  GlobeIcon 
+  ChevronDownIcon 
 } from "@radix-ui/react-icons";
 
 export default function AdConnector() {
@@ -14,7 +13,6 @@ export default function AdConnector() {
   const connectedAccounts = useQuery(api.adAccounts.get) || [];
   const linkAccount = useMutation(api.adAccounts.link);
 
-  // قائمة المنصات التي يحتاجها أي Dropshipper
   const platforms = [
     { id: "facebook", name: "Facebook Ads", icon: "💙" },
     { id: "tiktok", name: "TikTok Ads", icon: "🖤" },
@@ -40,7 +38,6 @@ export default function AdConnector() {
 
   return (
     <div className="relative">
-      {/* الزر الرئيسي الموحد */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="w-full bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 p-4 rounded-2xl flex items-center justify-between transition-all group"
@@ -59,7 +56,6 @@ export default function AdConnector() {
         <ChevronDownIcon className={`text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* القائمة المنسدلة للمنصات */}
       {isOpen && (
         <div className="absolute top-full left-0 w-full mt-2 bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden z-50 shadow-2xl backdrop-blur-xl">
           <div className="p-2 grid grid-cols-1 gap-1">
