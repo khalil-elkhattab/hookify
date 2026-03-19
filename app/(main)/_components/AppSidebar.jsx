@@ -20,8 +20,7 @@ import {
 } from "lucide-react";
 import { useUser } from "../../hooks/useUser";
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-
+import { api } from "../../../convex/_generated/api";
 export default function AppSidebar({ email }) {
   const pathname = usePathname();
   const router = useRouter();

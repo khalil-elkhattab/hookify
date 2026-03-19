@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api"; 
+import { api } from "../../convex/_generated/api"; 
 
 export function useUser(email) {
   // 1. المسار الصحيح هو api.user.getUser

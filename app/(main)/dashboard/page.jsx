@@ -9,7 +9,10 @@ import {
   MagnifyingGlassIcon, TextIcon, PlayIcon, 
   EyeOpenIcon, CopyIcon, CheckIcon, ChevronDownIcon, DownloadIcon
 } from "@radix-ui/react-icons";
-import { Share2, Facebook, Instagram, Youtube, Send, Layers } from "lucide-react"; 
+import { Share2, Facebook, Instagram, Youtube, Send, Layers, Activity, MousePointer2, Move } from "lucide-react"; 
+
+// استيراد المكون الجديد
+import MagicRadar from "../../components/MagicRadar"; 
 
 // TikTok Icon Component
 const TikTokIcon = ({ size = 16 }) => (
@@ -21,12 +24,12 @@ const TikTokIcon = ({ size = 16 }) => (
 import AdPreview from "./_components/AdPreview";
 import { analyzeHook } from "./_components/scoring-engine";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 
-import MusicSearch from '../../components/MusicSearch'; 
+import MusicSearch from "../../components/MusicSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -80,11 +83,8 @@ export default function HookifyDashboard() {
   const [renderStatusText, setRenderStatusText] = useState("DOWNLOAD FINAL VIDEO");
   const [aiVoiceUrl, setAiVoiceUrl] = useState(null);
 
-  // مرجع للوصول إلى بيانات التعديل داخل AdPreview
   const adPreviewRef = useRef(null);
-
   const activeLang = languages.find(l => l.code === selectedLanguage) || languages[2];
-
   const analysis = useMemo(() => {
     if (!activeHook || activeHook === "AI Ad Engine Ready...") return null;
     return analyzeHook(activeHook);
@@ -112,13 +112,8 @@ export default function HookifyDashboard() {
     return () => stopAllMedia();
   }, [user, isUserLoaded]);
 
-  useEffect(() => {
-    if (musicRef.current) musicRef.current.volume = musicVolume;
-  }, [musicVolume]);
-
-  useEffect(() => {
-    if (voiceRef.current) voiceRef.current.volume = voiceVolume;
-  }, [voiceVolume]);
+  useEffect(() => { if (musicRef.current) musicRef.current.volume = musicVolume; }, [musicVolume]);
+  useEffect(() => { if (voiceRef.current) voiceRef.current.volume = voiceVolume; }, [voiceVolume]);
 
   const startAnalyzing = (audioElement) => {
     try {
@@ -194,10 +189,8 @@ export default function HookifyDashboard() {
       if (!response.ok) throw new Error("TTS API Fail");
       const blob = await response.blob();
       setLastVoiceBlob(blob);
-      
       const blobUrl = URL.createObjectURL(blob);
       setAiVoiceUrl(blobUrl);
-
       currentObjectUrlRef.current = blobUrl;
       const audio = new Audio(blobUrl);
       audio.volume = voiceVolume;
@@ -254,68 +247,39 @@ export default function HookifyDashboard() {
     } catch (error) { setLoadingStatus("❌ Error: " + error.message); } finally { setLoading(false); }
   };
 
-  // --- MODIFIED DOWNLOAD LOGIC: SENDING REAL DATA FROM PREVIEW ---
   const handleDownloadAd = async () => {
     if (!activeHook || activeHook === "AI Ad Engine Ready...") return alert("Generate an ad first!");
-    
     setIsDownloading(true);
     setRenderStatusText("INITIALIZING...");
-    
-    // محاولة جلب الإحداثيات والبيانات مباشرة من AdPreview إذا كانت متاحة عبر State
-    // ملاحظة: بما أن AdPreview مكون داخلي، يفضل تمرير البيانات إليه بدلاً من سحبها منه،
-    // ولكن هنا نرسل القيم الحالية التي يراها المستخدم.
-
     try {
       const response = await fetch("/api/generate/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            aiScript: activeHook, 
-            videoUrl: videoUrl, 
-            selectedMusic: selectedMusicUrl,
-            selectedStyle: selectedStyle,
-            aiVoiceUrl: aiVoiceUrl, // رابط الصوت الذي تم توليده
-            storeName: "Hookify Store", // يمكنك جعل هذا State إذا أردت
-            activeOffer: "SPECIAL OFFER",
-            logoPos: { x: 20, y: 20 }, // الإحداثيات الافتراضية أو المسحوبة
-            namePos: { x: 20, y: 80 },
-            offerPos: { x: 20, y: 120 }
+            aiScript: activeHook, videoUrl, selectedMusic: selectedMusicUrl, selectedStyle,
+            aiVoiceUrl, storeName: "Hookify Store", activeOffer: "SPECIAL OFFER",
+            logoPos: { x: 20, y: 20 }, namePos: { x: 20, y: 80 }, offerPos: { x: 20, y: 120 }
         })
       });
-
       const initialData = await response.json();
-      if (!initialData.response || !initialData.response.id) {
-        throw new Error(initialData.details || "Render Request Refused");
-      }
-
+      if (!initialData.response || !initialData.response.id) throw new Error(initialData.details || "Render Request Refused");
       const renderId = initialData.response.id;
-
       const checkInterval = setInterval(async () => {
         setRenderStatusText("RENDERING IN CLOUD...");
-        
         try {
           const statusRes = await fetch(`https://api.shotstack.io/stage/render/${renderId}`, {
-            headers: { 
-              'x-api-key': process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY,
-              'Content-Type': 'application/json' 
-            }
+            headers: { 'x-api-key': process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY, 'Content-Type': 'application/json' }
           });
-          
           const statusData = await statusRes.json();
           if (!statusData.response) return;
-          
           const currentStatus = statusData.response.status;
-
           if (currentStatus === 'done') {
             clearInterval(checkInterval);
             setRenderStatusText("SAVING TO DEVICE...");
-            
             const finalVideoUrl = statusData.response.url;
-
             const videoBlobResponse = await fetch(finalVideoUrl);
             const blob = await videoBlobResponse.blob();
             const downloadUrl = window.URL.createObjectURL(blob);
-            
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = `hookify-${renderId}.mp4`;
@@ -323,13 +287,7 @@ export default function HookifyDashboard() {
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(downloadUrl);
-
-            await trackExport({ 
-              style: selectedStyle, 
-              text: activeHook,
-              videoUrl: finalVideoUrl 
-            });
-
+            await trackExport({ style: selectedStyle, text: activeHook, videoUrl: finalVideoUrl });
             setIsDownloading(false);
             setRenderStatusText("✅ DOWNLOAD READY");
             setTimeout(() => setRenderStatusText("DOWNLOAD FINAL VIDEO"), 3000);
@@ -337,11 +295,8 @@ export default function HookifyDashboard() {
             clearInterval(checkInterval);
             throw new Error("Render Failed Internally");
           }
-        } catch (err) {
-          console.error("Polling Error:", err);
-        }
+        } catch (err) { console.error("Polling Error:", err); }
       }, 5000);
-
     } catch (error) { 
       setIsDownloading(false);
       setRenderStatusText("DOWNLOAD FINAL VIDEO");
@@ -352,225 +307,229 @@ export default function HookifyDashboard() {
   const handlePublish = async (platform) => {
     const PIPEDREAM_URL = "https://e93aa22d438c84b959d2999c970bc566.m.pipedream.net"; 
     setPublishStatus(`⏳ Publishing to ${platform}...`);
-
-    const payload = {
-      platform: platform,
-      text: activeHook,
-      videoUrl: videoUrl || (allProductImages.length > 0 ? "Image Sequence" : null),
-      product: productUrl,
-      userEmail: user?.emailAddresses[0]?.emailAddress,
-      timestamp: new Date().toISOString(),
-      style: selectedStyle,
-      musicUrl: selectedMusicUrl
-    };
-
     try {
       const response = await fetch(PIPEDREAM_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform, text: activeHook, videoUrl: videoUrl || "Image Sequence",
+          product: productUrl, userEmail: user?.emailAddresses[0]?.emailAddress,
+          timestamp: new Date().toISOString(), style: selectedStyle, musicUrl: selectedMusicUrl
+        })
       });
-
       if (response.ok) {
         setPublishStatus(`🚀 Published to ${platform} Successfully!`);
         setTimeout(() => setPublishStatus(null), 4000);
-      } else {
-        throw new Error("Pipedream connection failed");
-      }
+      } else throw new Error("Pipedream connection failed");
     } catch (e) {
       setPublishStatus(`❌ Failed to publish to ${platform}`);
       setTimeout(() => setPublishStatus(null), 4000);
     }
   };
 
-  const copyToClipboard = (text, index) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
   if (!isMounted) return null;
 
   return (
-    <main className="p-4 md:p-8 lg:p-10 max-w-[1700px] mx-auto text-white space-y-10 min-h-screen bg-[#020202] overflow-x-hidden">
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_-20%,#1e293b,transparent)] pointer-events-none" />
-      
+    <main className="relative min-h-screen bg-[#050505] text-white selection:bg-blue-500/30 overflow-hidden font-sans">
+      <div className="absolute inset-0 opacity-[0.15] pointer-events-none" 
+           style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+      <div className="absolute inset-0 bg-gradient-to-b from-blue-600/5 via-transparent to-transparent pointer-events-none" />
+
+      {/* NAV BAR */}
+      <nav className="relative z-50 border-b border-white/5 bg-black/40 backdrop-blur-md px-6 py-3 flex justify-between items-center">
+        <div className="flex items-center gap-4">
+            <div className="bg-blue-600 p-1.5 rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                <LightningBoltIcon className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-black tracking-tighter text-lg">HOOKIFY <span className="text-blue-500">PRO</span></span>
+            <div className="h-4 w-[1px] bg-white/10 mx-2" />
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{loadingStatus || "System Ready"}</span>
+            </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end">
+                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest leading-none">Power Credits</span>
+                <span className="text-sm font-black text-white">{userData?.credits ?? 0}</span>
+            </div>
+            <button onClick={() => router.push("/pricing")} className="bg-white text-black px-4 py-1.5 rounded-lg text-xs font-black hover:bg-blue-500 hover:text-white transition-all">UPGRADE</button>
+        </div>
+      </nav>
+
+      {/* DASHBOARD GRID */}
+      <div className="relative z-10 p-6 grid grid-cols-12 gap-6 h-[calc(100vh-70px)]">
+        
+        {/* LEFT PANEL */}
+        <section className="col-span-3 flex flex-col gap-4 overflow-y-auto pr-2 scrollbar-hide">
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-600" />
+                <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <MousePointer2 size={12} /> Input Node
+                </h3>
+                
+                <div className="space-y-5">
+                    {/* المكون الجديد: Magic Radar Button */}
+                    <div className="pb-2">
+                      <MagicRadar keyword={productUrl} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase">Product Link or Name</label>
+                        <div className="relative">
+                            <input type="text" value={productUrl} onChange={(e) => setProductUrl(e.target.value)} placeholder="Search..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:border-blue-500 outline-none transition-all" />
+                            <button onClick={handleGenerate} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 rounded-lg">
+                                {loading ? <UpdateIcon className="animate-spin w-3 h-3" /> : <MagicWandIcon className="w-3 h-3" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase">Target Audience</label>
+                        <button onClick={() => setIsLangOpen(!isLangOpen)} className="w-full flex items-center justify-between bg-white/5 border border-white/10 px-4 py-3 rounded-xl text-xs">
+                            <span className="flex items-center gap-2">{activeLang.flag} {activeLang.name}</span>
+                            <ChevronDownIcon />
+                        </button>
+                    </div>
+
+                    <MusicSearch onSelectMusic={(url) => setSelectedMusicUrl(url)} />
+                </div>
+            </div>
+
+            {scrapedVideos.length > 0 && (
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-5 shadow-2xl">
+                    <h3 className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] mb-4">Asset Library</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                        {scrapedVideos.slice(0, 4).map((vid, idx) => (
+                            <button key={idx} onClick={() => { setVideoUrl(vid.videoUrl); setVideoStats(vid.stats); }} className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${videoUrl === vid.videoUrl ? 'border-blue-600' : 'border-transparent opacity-50'}`}>
+                                <img src={vid.thumbnail} className="w-full h-full object-cover" />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </section>
+
+        {/* CENTER PANEL */}
+        <section className="col-span-6 flex flex-col items-center justify-center relative overflow-hidden">
+            <div className="absolute left-[-30px] top-1/2 w-[30px] h-[2px] bg-gradient-to-r from-blue-600/50 to-transparent" />
+            <div className="absolute right-[-30px] top-1/2 w-[30px] h-[2px] bg-gradient-to-l from-blue-600/50 to-transparent" />
+            
+            <div className="relative group flex items-center justify-center h-full max-h-[75vh] w-full max-w-[360px] aspect-[9/16] transition-transform duration-500">
+                <div className="absolute -inset-10 bg-blue-600/10 blur-[100px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                <AdPreview 
+                    ref={adPreviewRef} 
+                    allProductImages={allProductImages} 
+                    videoUrl={videoUrl} 
+                    currentImageIndex={currentImageIndex} 
+                    audioLevel={audioLevel} 
+                    audioProgress={audioProgress} 
+                    isPlaying={isPlaying} 
+                    visibleWords={visibleWords} 
+                    selectedStyle={selectedStyle} 
+                />
+            </div>
+
+            <div className="mt-6 w-full max-w-sm space-y-4 px-4">
+                <div className="flex gap-4 p-4 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl">
+                    <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3"><SpeakerLoudIcon className="w-3 h-3 text-blue-500" /><input type="range" min="0" max="1" step="0.05" value={voiceVolume} onChange={(e) => setVoiceVolume(parseFloat(e.target.value))} className="w-full h-1 accent-blue-500 bg-white/10 rounded-full appearance-none" /></div>
+                        <div className="flex items-center gap-3"><ComponentInstanceIcon className="w-3 h-3 text-zinc-500" /><input type="range" min="0" max="0.5" step="0.01" value={musicVolume} onChange={(e) => setMusicVolume(parseFloat(e.target.value))} className="w-full h-1 accent-zinc-500 bg-white/10 rounded-full appearance-none" /></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* RIGHT PANEL */}
+        <section className="col-span-3 flex flex-col gap-4 overflow-y-auto pl-2 scrollbar-hide">
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-1 h-full bg-green-500" />
+                <h3 className="text-[10px] font-black text-green-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <Activity size={12} /> Optimization Node
+                </h3>
+                
+                {analysis ? (
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-zinc-400">Viral Potential</span>
+                            <span className="text-2xl font-black" style={{ color: analysis.color }}>{analysis.totalScore}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full transition-all duration-1000" style={{ width: `${analysis.totalScore}%`, backgroundColor: analysis.color }} />
+                        </div>
+                        <p className="text-[10px] text-zinc-500 leading-relaxed bg-white/5 p-3 rounded-lg border border-white/5 italic">"{analysis.verdict}"</p>
+                    </div>
+                ) : (
+                    <div className="py-10 text-center border-2 border-dashed border-white/5 rounded-xl">
+                        <p className="text-[9px] font-black text-zinc-600 uppercase">Awaiting AI Script...</p>
+                    </div>
+                )}
+            </div>
+
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-5 shadow-2xl">
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Export Pipeline</h3>
+                <div className="space-y-3">
+                    <button onClick={handleDownloadAd} disabled={isDownloading} className="w-full py-4 rounded-xl bg-white text-black font-black text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-2">
+                        {isDownloading ? <UpdateIcon className="animate-spin" /> : <DownloadIcon className="w-4 h-4" />} {renderStatusText}
+                    </button>
+                    <div className="grid grid-cols-4 gap-2">
+                         {[
+                           { id: 'FB', icon: <Facebook size={14}/>, color: 'hover:bg-blue-600' },
+                           { id: 'IG', icon: <Instagram size={14}/>, color: 'hover:bg-pink-600' },
+                           { id: 'TT', icon: <TikTokIcon size={14}/>, color: 'hover:bg-zinc-200 hover:text-black' },
+                           { id: 'YT', icon: <Youtube size={14}/>, color: 'hover:bg-red-600' }
+                         ].map((p) => (
+                            <button key={p.id} onClick={() => handlePublish(p.id)} className={`aspect-square bg-white/5 rounded-lg flex items-center justify-center text-zinc-500 transition-all ${p.color} hover:text-white`}>
+                                {p.icon}
+                            </button>
+                         ))}
+                    </div>
+                </div>
+            </div>
+
+            {aiVariations && (
+                <div className="flex-1 bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 overflow-y-auto">
+                    <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-4">Variation Stack</h3>
+                    <div className="space-y-2">
+                        {Object.values(aiVariations).map((hook, idx) => (
+                            <button key={idx} onClick={() => { setActiveHook(hook); playVoice(hook); }} 
+                                    className={`w-full text-left p-3 rounded-xl border text-[10px] transition-all ${activeHook === hook ? 'border-blue-500 bg-blue-500/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
+                                <div className="text-zinc-500 font-bold mb-1 italic">#{idx + 1} Variation</div>
+                                <p className="line-clamp-2 leading-relaxed">{hook}</p>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </section>
+      </div>
+
+      {/* MODALS & NOTIFICATIONS */}
+      {isLangOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsLangOpen(false)} />
+              <div className="relative bg-[#0F0F0F] border border-white/10 rounded-[2rem] p-6 w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200">
+                  <h2 className="text-xs font-black uppercase tracking-[0.3em] text-blue-500 mb-6">Select Language Engine</h2>
+                  <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+                      {languages.map((lang) => (
+                          <button key={lang.code} onClick={() => { setSelectedLanguage(lang.code); setIsLangOpen(false); }} 
+                                  className={`flex items-center gap-3 p-3 rounded-xl transition-all ${selectedLanguage === lang.code ? 'bg-blue-600' : 'bg-white/5 hover:bg-white/10'}`}>
+                              <span className="text-lg">{lang.flag}</span>
+                              <span className="text-[10px] font-bold uppercase">{lang.name}</span>
+                          </button>
+                      ))}
+                  </div>
+              </div>
+          </div>
+      )}
+
       {publishStatus && (
-        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-10 duration-500">
-            <div className="bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.5)] border border-white/20 flex items-center gap-3 font-black text-xs uppercase tracking-widest">
-                <CheckIcon className="w-5 h-5" />
-                {publishStatus}
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10">
+            <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-black text-[10px] uppercase tracking-widest">
+                <CheckIcon className="w-4 h-4" /> {publishStatus}
             </div>
         </div>
       )}
-
-      <div className="flex justify-between items-start -mt-8 mb-4 relative z-10">
-          <div className="flex gap-3">
-              {videoStats && (
-                <div className="bg-pink-500/10 border border-pink-500/20 px-4 py-2 rounded-2xl flex items-center gap-3 backdrop-blur-md">
-                   <VideoIcon className="text-pink-500 w-4 h-4" />
-                   <div className="flex flex-col">
-                     <span className="text-[8px] font-black text-pink-500 uppercase">Viral Engagement</span>
-                     <span className="text-xs font-black text-white leading-none">{videoStats.views.toLocaleString()} Views</span>
-                   </div>
-                </div>
-              )}
-          </div>
-          <div className="flex gap-3">
-              <div className="bg-zinc-900/60 border border-white/5 px-4 py-2 rounded-2xl flex items-center gap-3 backdrop-blur-md">
-                <LightningBoltIcon className="text-blue-500 w-4 h-4 animate-pulse" />
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Power Credits</span>
-                  <span className="text-sm font-black text-white leading-none">{userData?.credits ?? 0}</span>
-                </div>
-              </div>
-              <button onClick={() => router.push("/pricing")} className="bg-white text-black text-[10px] font-black px-6 py-2 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-lg active:scale-95">Upgrade</button>
-          </div>
-      </div>
-
-      <div className="grid grid-cols-12 gap-8 items-stretch relative z-10">
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-          <div className="bg-[#0A0A0A]/80 border border-white/[0.08] p-8 rounded-[2.5rem] space-y-6 backdrop-blur-3xl shadow-3xl relative">
-            <h3 className="font-black flex items-center gap-2 text-blue-400 uppercase text-[11px] tracking-[0.3em]">
-              <div className="p-1.5 bg-blue-500/10 rounded-lg"><MixerHorizontalIcon /></div> Creative Engine v2
-            </h3>
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Product Search or URL</label>
-              <div className="relative group/input">
-                 <input type="text" value={productUrl} onChange={(e) => setProductUrl(e.target.value)} placeholder="Paste link or search product..." className="w-full bg-black/60 border border-white/5 rounded-3xl px-5 py-6 text-sm focus:border-blue-500/50 outline-none text-white pl-12 pr-16 transition-all shadow-inner" />
-                 <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 w-5 h-5" />
-                 <button onClick={handleGenerate} disabled={loading || !productUrl} className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${loading ? 'bg-zinc-800 text-zinc-500' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-[1.05] shadow-lg active:scale-95'}`}>
-                    {loading ? <UpdateIcon className="animate-spin w-4 h-4" /> : <MagicWandIcon className="w-4 h-4" />}
-                 </button>
-              </div>
-              
-              <div className="space-y-2 pt-2 relative">
-                <p className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-1">Target Language</p>
-                <button onClick={() => setIsLangOpen(!isLangOpen)} className="w-full flex items-center justify-between bg-white/5 border border-white/10 px-5 py-4 rounded-2xl hover:bg-white/10 transition-all group">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{activeLang.flag}</span>
-                    <span className="text-xs font-black uppercase tracking-widest">{activeLang.name}</span>
-                  </div>
-                  <ChevronDownIcon className={`w-5 h-5 text-zinc-500 transition-transform duration-300 ${isLangOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isLangOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsLangOpen(false)} />
-                    <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-[#0F0F0F] border border-white/10 rounded-3xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] max-h-[300px] overflow-y-auto scrollbar-hide animate-in fade-in zoom-in-95 duration-200">
-                        <div className="grid grid-cols-1 gap-1">
-                            {languages.map((lang) => (
-                             <button key={lang.code} onClick={() => { setSelectedLanguage(lang.code); setIsLangOpen(false); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${selectedLanguage === lang.code ? 'bg-blue-600 text-white' : 'hover:bg-white/5 text-zinc-400'}`}>
-                               <span className="text-lg">{lang.flag}</span>
-                               <span className="text-[11px] font-bold uppercase tracking-tight">{lang.name}</span>
-                               {selectedLanguage === lang.code && <CheckIcon className="ml-auto w-4 h-4" />}
-                             </button>
-                          ))}
-                        </div>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="pt-4 border-t border-white/5">
-                 <MusicSearch onSelectMusic={(url) => setSelectedMusicUrl(url)} />
-              </div>
-            </div>
-          </div>
-
-          {scrapedVideos.length > 0 && (
-            <div className="bg-[#0A0A0A]/80 border border-white/[0.08] p-6 rounded-[2.5rem] space-y-4 backdrop-blur-3xl shadow-2xl">
-              <p className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] px-1">Viral Assets Found</p>
-              <div className="grid grid-cols-3 gap-3">
-                {scrapedVideos.slice(0, 3).map((vid, idx) => (
-                  <button key={idx} onClick={() => { setVideoUrl(vid.videoUrl); setVideoStats(vid.stats); stopAllMedia(); }} className={`relative aspect-[9/16] rounded-2xl overflow-hidden border-2 transition-all duration-300 ${videoUrl === vid.videoUrl ? 'border-blue-500 scale-105' : 'border-white/5 opacity-40 hover:opacity-100'}`}>
-                    <img src={vid.thumbnail} className="w-full h-full object-cover" alt="Viral asset" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className={`p-2 rounded-full ${videoUrl === vid.videoUrl ? 'bg-blue-500 text-white' : 'bg-black/40 text-white'}`}>
-                        {videoUrl === vid.videoUrl ? <CheckIcon /> : <PlayIcon />}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="col-span-12 lg:col-span-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-7 flex flex-col items-center gap-8 bg-zinc-900/10 rounded-[3rem] p-6 border border-white/5">
-            <div className="relative w-full flex justify-center scale-90 md:scale-100">
-              <div className="absolute inset-0 m-auto border-[3px] rounded-[3.5rem] transition-all duration-300 opacity-20 pointer-events-none" style={{ width: '105%', height: '105%', borderColor: isPlaying ? '#3b82f6' : '#18181b', transform: `scale(${1 + (audioLevel/400)})` }} />
-              <AdPreview ref={adPreviewRef} allProductImages={allProductImages} videoUrl={videoUrl} currentImageIndex={currentImageIndex} audioLevel={audioLevel} audioProgress={audioProgress} isPlaying={isPlaying} visibleWords={visibleWords} selectedStyle={selectedStyle} />
-            </div>
-
-            <div className="flex flex-col gap-6 w-full max-w-[500px] items-center">
-                <div className="w-full bg-zinc-900/40 border border-white/5 p-5 rounded-[2.5rem] space-y-4 backdrop-blur-xl">
-                  <div className="flex items-center gap-4">
-                    <SpeakerLoudIcon className="w-3 h-3 text-blue-500"/><input type="range" min="0" max="1" step="0.05" value={voiceVolume} onChange={(e) => setVoiceVolume(parseFloat(e.target.value))} className="w-full h-1 accent-blue-500 appearance-none bg-white/5 rounded-full outline-none" />
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <ComponentInstanceIcon className="w-3 h-3 text-zinc-500"/><input type="range" min="0" max="0.5" step="0.01" value={musicVolume} onChange={(e) => setMusicVolume(parseFloat(e.target.value))} className="w-full h-1 accent-zinc-400 appearance-none bg-white/5 rounded-full outline-none" />
-                  </div>
-                </div>
-
-                <div className="w-full bg-[#0F0F0F] border border-white/5 p-6 rounded-[2rem] space-y-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500"><Share2 size={16} /></div>
-                        <h3 className="text-[10px] font-black uppercase tracking-widest">Instant Publish</h3>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-3">
-                    {[{ id: 'Facebook', icon: <Facebook size={16}/>, color: 'hover:bg-blue-600' }, { id: 'Instagram', icon: <Instagram size={16}/>, color: 'hover:bg-pink-600' }, { id: 'TikTok', icon: <TikTokIcon size={18}/>, color: 'hover:bg-white hover:text-black' }, { id: 'YouTube', icon: <Youtube size={16}/>, color: 'hover:bg-red-600' }].map((p) => (
-                      <button key={p.id} onClick={() => handlePublish(p.id)} className={`bg-white/5 border border-white/5 text-zinc-400 p-4 rounded-2xl flex items-center justify-center transition-all ${p.color} hover:text-white active:scale-90`}>
-                        {p.icon}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="w-full space-y-3">
-                  <button onClick={handleDownloadAd} disabled={isDownloading} className="w-full py-5 rounded-[1.5rem] font-black text-[11px] tracking-[0.4em] bg-white text-black hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group">
-                      {isDownloading ? <UpdateIcon className="animate-spin" /> : <DownloadIcon className="group-hover:animate-bounce w-4 h-4" />} 
-                      {renderStatusText}
-                  </button>
-                  <p className="text-center text-[8px] text-zinc-500 uppercase tracking-widest">Captions, Voice, and Music will be baked into the file</p>
-                </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            {aiVariations && (
-              <div className="w-full bg-zinc-900/40 border border-white/10 rounded-[2.5rem] p-6 backdrop-blur-2xl space-y-4 shadow-2xl">
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] ml-1">AI Script Variations</p>
-                <div className="space-y-3">
-                  {Object.values(aiVariations).slice(0, 5).map((hook, idx) => (
-                    <div key={idx} className={`group flex items-center justify-between gap-3 p-4 rounded-2xl border transition-all ${activeHook === hook ? 'bg-blue-600/20 border-blue-500/50' : 'bg-black/40 border-white/5 hover:border-white/20'}`}>
-                      <div className="flex flex-col overflow-hidden">
-                        <span className="text-[8px] font-bold text-zinc-500 uppercase mb-1">Variation {idx + 1}</span>
-                        <p className="text-[11px] text-zinc-300 leading-relaxed line-clamp-2">{hook}</p>
-                      </div>
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <button onClick={() => { setActiveHook(hook); playVoice(hook); }} className={`p-2.5 rounded-xl transition-all ${activeHook === hook ? 'bg-blue-500 text-white' : 'bg-white/5 text-zinc-400'}`}><EyeOpenIcon /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {analysis && (
-              <div className="w-full bg-gradient-to-br from-zinc-900/80 to-black border border-white/[0.08] p-6 rounded-[2rem] backdrop-blur-3xl shadow-3xl">
-                <div className="flex justify-between items-end mb-4">
-                  <div><h4 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-1 flex items-center gap-2"><BarChartIcon /> AI Ad Score</h4><p className="text-xl font-black text-white uppercase leading-none">{analysis.verdict}</p></div>
-                  <div className="text-3xl font-[1000]" style={{ color: analysis.color }}>{analysis.totalScore}%</div>
-                </div>
-                <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden border border-white/5 relative p-0.5">
-                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${analysis.totalScore}%`, backgroundColor: analysis.color }} />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
     </main>
   );
 }

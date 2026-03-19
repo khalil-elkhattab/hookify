@@ -1,96 +1,159 @@
-import React, { useState, useRef } from 'react';
-import { MagnifyingGlassIcon, PlayIcon, CheckIcon, UpdateIcon, SpeakerLoudIcon, PauseIcon } from "@radix-ui/react-icons";
-import { searchMusic } from '../services/musicService';
+"use client";
+import React, { useState, useEffect, useRef } from "react";
+import { 
+  MagnifyingGlassIcon, PlayIcon, CheckIcon, 
+  Cross2Icon, SpeakerLoudIcon, UpdateIcon, PauseIcon 
+} from "@radix-ui/react-icons";
+import { searchMusic } from '../services/musicService'; // تأكد من صحة المسار
 
-const MusicSearch = ({ onSelectMusic }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+export default function MusicSearch({ onSelectMusic }) {
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedTrackId, setSelectedTrackId] = useState(null);
-  
-  // Audio handling
-  const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(-1);
+  const previewAudioRef = useRef(null);
+
+  // تشغيل الأغنية التالية تلقائياً عند انتهاء الحالية
+  useEffect(() => {
+    if (previewIndex !== -1 && results[previewIndex]) {
+      const currentTrack = results[previewIndex];
+      // ملاحظة: نستخدم preview أو url حسب ما يعود من الـ API الخاص بك
+      const audioUrl = currentTrack.preview || currentTrack.url;
+      
+      if (previewAudioRef.current) {
+        previewAudioRef.current.src = audioUrl;
+        previewAudioRef.current.play().catch(err => console.log("Autoplay blocked or error:", err));
+        
+        previewAudioRef.current.onended = () => {
+          if (previewIndex < results.length - 1) {
+            setPreviewIndex(previewIndex + 1);
+          } else {
+            setPreviewIndex(-1); // العودة للبداية أو التوقف
+          }
+        };
+      }
+    }
+  }, [previewIndex, results]);
 
   const handleSearch = async () => {
-    if (!searchTerm) return;
+    if (!query) return;
     setLoading(true);
-    const data = await searchMusic(searchTerm);
-    setResults(data || []);
-    setLoading(false);
+    try {
+      const data = await searchMusic(query);
+      setResults(data || []);
+      setIsOpen(true); // فتح الصفحة الصغيرة فور ظهور النتائج
+      if (data && data.length > 0) setPreviewIndex(0); // ابدأ بتشغيل أول أغنية فوراً
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const togglePlay = (track) => {
-    if (audioRef.current && selectedTrackId === track.id) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
-    } else {
-      // New track selected
-      if (audioRef.current) audioRef.current.pause();
-      audioRef.current = new Audio(track.preview);
-      audioRef.current.play();
-      setSelectedTrackId(track.id);
-      setIsPlaying(true);
-      onSelectMusic(track.preview); // Send to your video engine
+  const closePage = () => {
+    setIsOpen(false);
+    setPreviewIndex(-1);
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
     }
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      <div className="relative group/input">
+    <div className="space-y-2">
+      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Background Music</label>
+      
+      {/* حقل البحث الرئيسي في الـ Dashboard */}
+      <div className="relative">
         <input 
           type="text" 
-          placeholder="Search viral beats..." 
-          className="w-full bg-black/40 border border-white/5 rounded-2xl px-10 py-3 text-[11px] focus:border-blue-500/50 outline-none text-white transition-all shadow-inner placeholder:text-zinc-700" 
-          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search tracks..." 
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:border-blue-500 outline-none transition-all"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
         />
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 w-4 h-4" />
-        <button onClick={handleSearch} disabled={loading} className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-xl transition-all active:scale-90 disabled:opacity-50">
-          {loading ? <UpdateIcon className="animate-spin w-4 h-4 text-blue-500" /> : <MagnifyingGlassIcon className="w-4 h-4 text-blue-500 font-bold" />}
+        <button 
+          onClick={handleSearch} 
+          disabled={loading}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50"
+        >
+          {loading ? <UpdateIcon className="animate-spin w-3 h-3 text-white" /> : <MagnifyingGlassIcon className="w-3 h-3 text-white" />}
         </button>
       </div>
 
-      {results.length > 0 && (
-        <div className="grid grid-cols-1 gap-2 max-h-[180px] overflow-y-auto pr-2 scrollbar-hide animate-in fade-in slide-in-from-top-2 duration-300">
-          {results.map((track) => (
-            <div 
-              key={track.id} 
-              className={`flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer group ${selectedTrackId === track.id ? 'bg-blue-600/10 border-blue-500/50' : 'bg-white/5 border-white/5 hover:border-white/10'}`}
-              onClick={() => togglePlay(track)}
-            >
-              <div className="relative shrink-0 group/cover">
-                <img src={track.album.cover_small} alt="cover" className="w-9 h-9 rounded-lg object-cover shadow-lg" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/cover:opacity-100 transition-opacity rounded-lg">
-                   {selectedTrackId === track.id && isPlaying ? <PauseIcon className="w-4 h-4 text-white" /> : <PlayIcon className="w-4 h-4 text-white" />}
-                </div>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black text-zinc-100 truncate uppercase tracking-tight">{track.title}</div>
-                <div className="text-[9px] text-zinc-500 truncate font-medium">{track.artist.name}</div>
-              </div>
-
+      {/* الصفحة الصغيرة (Modal) */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          {/* خلفية معتمة */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={closePage} />
+          
+          <div className="relative bg-[#0F0F0F] border border-white/10 rounded-[2rem] p-6 w-full max-w-sm shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
-                {selectedTrackId === track.id ? (
-                  <div className={`p-1 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.6)] ${isPlaying ? 'bg-blue-500' : 'bg-zinc-600'}`}>
-                    <CheckIcon className="w-3 h-3 text-white" />
-                  </div>
-                ) : (
-                  <SpeakerLoudIcon className="w-3 h-3 text-zinc-600 group-hover:text-zinc-300 transition-colors" />
-                )}
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Preview Playlist</h3>
               </div>
+              <button onClick={closePage} className="p-2 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors">
+                <Cross2Icon className="w-4 h-4" />
+              </button>
             </div>
-          ))}
+
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 scrollbar-hide">
+              {results.map((track, idx) => (
+                <div 
+                  key={track.id || idx} 
+                  className={`flex items-center justify-between p-3 rounded-2xl transition-all border ${
+                    previewIndex === idx 
+                    ? 'bg-blue-600/10 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.1)]' 
+                    : 'bg-white/5 border-transparent hover:border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button 
+                      onClick={() => setPreviewIndex(idx)}
+                      className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
+                        previewIndex === idx ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-zinc-400'
+                      }`}
+                    >
+                      {previewIndex === idx ? <SpeakerLoudIcon className="w-4 h-4 animate-pulse" /> : <PlayIcon className="w-4 h-4" />}
+                    </button>
+                    <div className="truncate">
+                      <p className="text-[10px] font-black text-white truncate uppercase tracking-tight">
+                        {track.title || track.name}
+                      </p>
+                      <p className="text-[8px] text-zinc-500 font-bold uppercase truncate">
+                        {track.artist?.name || track.artist}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      const finalUrl = track.preview || track.url;
+                      onSelectMusic(finalUrl);
+                      closePage(); // إغلاق الصفحة فور الاختيار
+                    }}
+                    className="ml-4 px-4 py-2 bg-white text-black text-[9px] font-black rounded-xl hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                  >
+                    SELECT
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* عنصر الصوت الخفي */}
+            <audio ref={previewAudioRef} hidden />
+            
+            <div className="mt-6 flex flex-col items-center gap-2">
+              <div className="h-[1px] w-full bg-white/5" />
+              <p className="text-[8px] text-zinc-600 font-black uppercase tracking-[0.1em] mt-2">
+                Auto-playing next track
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
-};
-
-export default MusicSearch;
+}

@@ -3,7 +3,7 @@
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import { ClerkProvider, useAuth, UserButton } from "@clerk/nextjs"; // استخدمنا Clerk هنا
 import AppSidebar from "./_components/AppSidebar";
 

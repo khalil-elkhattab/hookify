@@ -2,13 +2,13 @@
   "name": "hookify",
   "version": "0.1.0",
   "private": true,
-"scripts": {
-  "dev": "cross-env NODE_OPTIONS='--dns-result-order=ipv4first' next dev",
-  "build": "next build",
-  "start": "next start",
-  "lint": "eslint",
-  "remotion": "remotion studio ./remotion/index.jsx"
-},
+  "scripts": {
+    "dev": "cross-env NODE_OPTIONS='--dns-result-order=ipv4first' next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "remotion": "remotion studio ./remotion/index.jsx"
+  },
   "dependencies": {
     "@clerk/clerk-react": "^5.59.3",
     "@clerk/nextjs": "^6.36.7",
@@ -36,7 +36,7 @@
     "cross-env": "^10.1.0",
     "elevenlabs": "^1.59.0",
     "firebase": "^12.7.0",
-    "framer-motion": "^12.25.0",
+    "framer-motion": "^12.38.0",
     "google-auth-library": "^9.0.0",
     "googleapis": "^170.0.0",
     "groq-sdk": "^0.37.0",
@@ -56,6 +56,7 @@
     "uploadthing": "^7.7.4"
   },
   "devDependencies": {
+    "@types/react": "19.2.14",
     "autoprefixer": "^10.4.23",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
